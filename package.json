@@ -1,0 +1,19 @@
+{
+  "name": "opha",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@discordjs/builders": "^1.13.0",
+    "@supabase/supabase-js": "^2.84.0",
+    "discord.js": "^14.25.1",
+    "node-cron": "^4.2.1"
+  }
+}
