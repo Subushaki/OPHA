@@ -8,10 +8,15 @@ const config = require("./config.json");
 // 1. İLK AYARLAR
 // =======================================================
 
+// Supabase Bağlantı Bilgilerini ORTAM DEĞİŞKENLERİNDEN (Render'dan) oku
+const supabaseUrl = process.env.SUPABASE_URL; // Render'daki ad: SUPABASE_URL
+const supabaseAnonKey = process.env.SUPABASE_KEY; // Render'daki ad: SUPABASE_KEY
+
 // Supabase Bağlantısı
-const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Discord Client Oluşturma
+// config dosyasından okunan "token" bilgisini de düzeltmemiz gerekiyor!
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -144,4 +149,4 @@ client.on('interactionCreate', async interaction => {
 // =======================================================
 // 4. BOT BAŞLATMA
 // =======================================================
-client.login(config.token);
+client.login(process.env.DISCORD_TOKEN);
