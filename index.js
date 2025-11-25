@@ -1,3 +1,5 @@
+require('./server.js'); // Veya dosya adınız neyse (Ör: './keep_alive.js')
+
 const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Routes, PermissionsBitField } = require("discord.js");
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { createClient } = require('@supabase/supabase-js');
