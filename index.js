@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, But
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { createClient } = require('@supabase/supabase-js');
 const cron = require('node-cron');
+const fetch = require('node-fetch'); // Web entegrasyonu için require eklendi
 // const config = require("./config.json"); // Artık kullanılmıyor
 
 // =======================================================
@@ -37,16 +38,16 @@ const commands = [
         .setName('cekilis-olustur')
         .setDescription('Yeni bir çekiliş başlatır ve veritabanına kaydeder.')
         .addStringOption(option =>
-            option.setName('odul')
+            option.setName('item')
                 .setDescription('Çekilişin ödülü (örn: AK-47 Skin)')
                 .setRequired(true))
         .addIntegerOption(option =>
-            option.setName('kazanan_sayisi')
+            option.setName('kazanan-sayisi')
                 .setDescription('Kaç kişi kazanacak?')
                 .setRequired(true))
         .addStringOption(option =>
-            option.setName('sure')
-                .setDescription('Çekiliş süresi (Örn: 24h, 7d, 30d). Maksimum 30d.')
+            option.setName('zaman')
+                .setDescription('Giveaway duration (E.g: 5m, 1h, 30d). Min 1m, Max 30d.') // Açıklama güncellendi
                 .setRequired(true))
 ].map(command => command.toJSON());
 
@@ -90,42 +91,54 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.deferReply({ ephemeral: true }); // Kullanıcıya bekleme mesajı gönder
 
-        const odul = interaction.options.getString('odul');
-        const kazananSayisi = interaction.options.getInteger('kazanan_sayisi');
-        const sureStr = interaction.options.getString('sure');
+        const odul = interaction.options.getString('item');
+        const kazananSayisi = interaction.options.getInteger('kazanan-sayisi');
+        const sureStr = interaction.options.getString('zaman');
 
-        // Süre hesaplama ve Maksimum 30 Gün (1 Ay) Limiti Kontrolü
+        // Süre Hesaplama Sabitleri
+        const MINUTE = 60 * 1000;
+        const HOUR = MINUTE * 60;
+        const DAY = HOUR * 24;
+        const minSureMs = 1 * MINUTE; // 1 dakika minimum
+        const maxSureMs = 30 * DAY;   // 30 gün maksimum
+
+        // Süre hesaplama ve Min/Max Limit Kontrolü (GÜNCELLENMİŞ MANTIK)
         let bitisZamani = new Date();
-        const sureRegex = /(\d+)(h|d)/i; // 'm' dakika birimini kaldırdık, sadece saat ve gün kullanacağız.
+        const sureRegex = /(\d+)(m|h|d)/i; // m, h, d birimlerini kabul et
         const match = sureStr.match(sureRegex);
+        let sureMs = 0;
 
         if (!match) {
-            return interaction.editReply({ content: 'Geçersiz süre formatı. Lütfen "1minute, 1hour, 1day" gibi kullanın.', ephemeral: true });
+            return interaction.editReply({ content: 'Invalid duration format. Please use "5m, 1h, 7d" (m=minute, h=hour, d=day).', ephemeral: true });
         }
 
         const [_, miktar, birim] = match;
         const miktarInt = parseInt(miktar);
-        const maxSureMs = 30 * 24 * 60 * 60 * 1000; // 30 Gün milisaniye cinsinden
 
-        if (birim === 'h') {
-            const sureMs = miktarInt * 60 * 60 * 1000;
-            if (sureMs > maxSureMs) {
-                return interaction.editReply({ content: 'Çekiliş süresi maksimum 30 gün (720h) olabilir.', ephemeral: true });
-            }
-            bitisZamani.setHours(bitisZamani.getHours() + miktarInt);
-        } else if (birim === 'd') {
-            const sureMs = miktarInt * 24 * 60 * 60 * 1000;
-            if (sureMs > maxSureMs) {
-                return interaction.editReply({ content: 'Çekiliş süresi maksimum 30 gün olabilir.', ephemeral: true });
-            }
-            bitisZamani.setDate(bitisZamani.getDate() + miktarInt);
+        if (birim.toLowerCase() === 'm') {
+            sureMs = miktarInt * MINUTE;
+        } else if (birim.toLowerCase() === 'h') {
+            sureMs = miktarInt * HOUR;
+        } else if (birim.toLowerCase() === 'd') {
+            sureMs = miktarInt * DAY;
         }
 
+        // Min/Max Süre Kontrolü
+        if (sureMs < minSureMs) {
+            return interaction.editReply({ content: 'Giveaway duration must be at least 1 minute (1m).', ephemeral: true });
+        }
+        if (sureMs > maxSureMs) {
+            return interaction.editReply({ content: `Giveaway duration is too long. Maximum allowed is 30 days (${Math.floor(maxSureMs / DAY)}d).`, ephemeral: true });
+        }
+        
+        // Bitiş zamanını ayarla
+        bitisZamani.setTime(bitisZamani.getTime() + sureMs);
+        
         // Çekiliş Mesajı (Embed) Oluşturma
         const giveawayEmbed = new EmbedBuilder()
             .setColor(0x0099ff)
             .setTitle(`🎉 YENİ ÇEKİLİŞ: ${odul}`)
-            .setDescription(`Bu çekilişe katılmak için aşağıdaki 🎁 tepkisine tıklayın.\n\n**Kazanan Sayısı:** ${kazananSayisi}\n**Bitiş Zamanı:** <t:${Math.floor(bitisZamani.getTime() / 1000)}:R>`)
+            .setDescription(`Bu çekilişe katılmak için aşağıdaki (🎁) tepkisine tıklayın.\n\n**Kazanan Sayısı:** ${kazananSayisi}\n**Bitiş Zamanı:** <t:${Math.floor(bitisZamani.getTime() / 1000)}:R>`)
             .setTimestamp(bitisZamani)
             .setFooter({ text: 'İyi Şanslar!' });
 
@@ -172,9 +185,8 @@ async function sendToSLTCS2Web(data) {
     }
 
     try {
-        // fetch modülünü require etmemiz gerekiyor
-        const fetch = require('node-fetch');
-
+        
+        // fetch modülünü yukarıda global olarak tanımladık.
         const response = await fetch(process.env.WEB_API_URL, {
             method: 'POST',
             headers: {
