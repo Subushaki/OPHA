@@ -53,7 +53,7 @@ const commands = [
 // Bot Hazır olduğunda
 client.once("ready", async () => {
     console.log(`🚀 Botunuz Hazır! ${client.user.tag} olarak giriş yaptı.`);
-    client.user.setActivity("SLT-CS2 Çekilişlerini", { type: 4 });
+    client.user.setActivity("Çekiliş Yaparım!", { type: 4 });
 
     // Komutları Discord API'ye kaydet (Global olarak kaydedelim)
     try {
@@ -100,7 +100,7 @@ client.on('interactionCreate', async interaction => {
         const match = sureStr.match(sureRegex);
 
         if (!match) {
-            return interaction.editReply({ content: 'Geçersiz süre formatı. Lütfen 24h, 7d, 30d gibi kullanın.', ephemeral: true });
+            return interaction.editReply({ content: 'Geçersiz süre formatı. Lütfen "1minute, 1hour, 1day" gibi kullanın.', ephemeral: true });
         }
 
         const [_, miktar, birim] = match;
@@ -262,7 +262,7 @@ async function sonuclandir() {
 
             if (winners.length > 0) {
                 const winnerMentions = winners.map(id => `<@${id}>`).join(', ');
-                resultMessage = `🎉🎉🎉 **TEBRİKLER!** 🎉🎉🎉\n\n**Ödül:** ${giveaway.prize}\n**Kazananlar:** ${winnerMentions}\n\nLütfen ödülünüzü almak için "talep" oluşturun.`;
+                resultMessage = `🎉🎊🎉 **TEBRİKLER!** 🎉🎊🎉\n\n**Ödül:** ${giveaway.prize}\n**Kazananlar:** ${winnerMentions}\n\n**~** *Lütfen ödülünüzü almak için* **"talep"** *oluşturun.*`;
                 
                 // Web Sitesi için veri hazırlama (Kullanıcı adlarını çekmek gerekebilir)
                 const winnerUsernames = winners.map(id => guild.members.cache.get(id)?.user.tag || `ID: ${id}`);
@@ -283,7 +283,7 @@ async function sonuclandir() {
 
             // Orijinal mesajı düzenle
             const finalEmbed = new EmbedBuilder(message.embeds[0].toJSON())
-                .setDescription(`~~Bu çekilişe katılmak için aşağıdaki 🎁 tepkisine tıklayın.~~\n\n**Kazanan Sayısı:** ${giveaway.winner_count}\n**BİTTİ!**`)
+                .setDescription(`~~Bu çekilişe katılmak için aşağıdaki "🎁" tepkisine tıklayın.~~\n\n**Kazanan Sayısı:** ${giveaway.winner_count}\n**BİTTİ!**`)
                 .setColor(0xff0000) // Kırmızıya çevir
                 .setTitle(`🏆 SONUÇLANDI: ${giveaway.prize}`);
 
